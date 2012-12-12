@@ -25,4 +25,5 @@
     {:channel (util/handle-messages ch is-lobby-msg lobby-ch)
      :lobby (->> lobby-ch
                  (reductions* handle-lobby-msg {})
-                 (filter* (complement :unfinished)))}))
+                 (filter* (complement :unfinished))
+                 (atom-sink {}))}))
