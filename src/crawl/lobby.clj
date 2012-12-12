@@ -2,10 +2,6 @@
   (:use lamina.core)
   (:require [crawl.util :as util]))
 
-(defn- is-lobby-msg
-  [msg]
-  (re-matches #"^lobby_.*" (:msg msg)))
-
 (defn- handle-lobby-msg
   [lobby-info msg]
   (case (:msg msg)
@@ -22,7 +18,7 @@
   [conn]
   (let [ch (:channel conn)
         lobby-ch (channel)]
-    {:channel (util/handle-messages ch is-lobby-msg lobby-ch)
+    {:channel (util/handle-messages ch (util/match-msg #"lobby_.*") lobby-ch)
      :lobby (->> lobby-ch
                  (reductions* handle-lobby-msg {})
                  (filter* (complement :unfinished))

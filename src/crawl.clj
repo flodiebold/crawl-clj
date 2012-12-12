@@ -23,7 +23,7 @@
 
 (defn- respond-to-pings
   [ch]
-  (util/handle-messages ch #(= "ping" (:msg %))
+  (util/handle-messages ch (util/match-msg #"ping")
                         (sink (fn [ping]
                                 (enqueue ch {:msg "pong"})))))
 
@@ -37,6 +37,14 @@
   [ch]
   {:channel ch})
 
+(defn- separate-login-messages
+  [conn]
+  (let [login-ch (channel)]
+    (assoc conn
+      :channel (util/handle-messages (:channel conn) (util/match-msg #"login_.*")
+                                     login-ch)
+      ::logins login-ch)))
+
 (defn connect
   [domain port]
   (let [client (ws/websocket-client {:scheme "ws" :server-name domain
@@ -47,7 +55,20 @@
                   wrap-json
                   respond-to-pings
                   wrap-connection
-                  crawl.lobby/handle-lobby-info)))
+                  crawl.lobby/handle-lobby-info
+                  separate-login-messages)))
+
+(defn login
+  [connection credentials]
+  (let [{username :username password :password} credentials]
+    (enqueue (:channel connection) {:msg "login"
+                                    :username username
+                                    :password password})
+    (run-pipeline (read-channel (::logins connection))
+                  (fn [msg]
+                    (case (:msg msg)
+                      "login_fail" nil
+                      "login_success" (:username msg))))))
 
 (defn close
   [connection]
