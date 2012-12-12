@@ -1,8 +1,11 @@
 (ns crawl
-  (:use lamina.core)
+  (:use [lamina.core :exclude (close)])
   (:require [aleph.http.websocket :as ws]
+            [cheshire.core :as json]
+            [clojure.string :as s]
             [crawl.compression :as compression]
-            [cheshire.core :as json]))
+            [crawl.util :as util]
+            crawl.lobby))
 
 (defn- wrap-decompression
   [ch]
@@ -13,26 +16,26 @@
 
 (defn- wrap-json
   [ch]
-  (let [ch* (channel)]
+  (let [ch* (channel)
+        keyword-munger (fn [k] (keyword (s/replace k "_" "-")))]
     (join (map* json/generate-string ch*) ch)
-    (splice (map* #(json/parse-string % true) ch) ch*)))
+    (splice (map* #(json/parse-string % keyword-munger) ch) ch*)))
 
 (defn- respond-to-pings
   [ch]
-  (let [is-ping #(= "ping" (:msg %))
-        ch* (channel)]
-    (join ch (split (sink->> (filter* is-ping)
-                             (fn [ping]
-                               (println "pong" ping)
-                               (enqueue ch {:msg "pong"})))
-                    ch*))
-    (splice (remove* is-ping ch*) ch)))
+  (util/handle-messages ch #(= "ping" (:msg %))
+                        (sink (fn [ping]
+                                (enqueue ch {:msg "pong"})))))
 
 (defn- print-msgs
   [name ch]
   (let [ch* (channel)]
     (join ch (split (sink (partial println name)) ch*))
     (splice ch* ch)))
+
+(defn- wrap-connection
+  [ch]
+  {:channel ch})
 
 (defn connect
   [domain port]
@@ -42,5 +45,10 @@
     (run-pipeline client
                   wrap-decompression
                   wrap-json
-                  (partial print-msgs "post")
-                  respond-to-pings)))
+                  respond-to-pings
+                  wrap-connection
+                  crawl.lobby/handle-lobby-info)))
+
+(defn close
+  [connection]
+  (lamina.core/close (:channel connection)))
