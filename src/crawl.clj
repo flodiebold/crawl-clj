@@ -46,6 +46,8 @@
       ::logins login-ch)))
 
 (defn connect
+  "Connects to a DCSS server at the given domain and port.
+Returns a map representing the connection."
   [domain port]
   (let [client (ws/websocket-client {:scheme "ws" :server-name domain
                                      :server-port port
@@ -59,6 +61,9 @@
                   separate-login-messages)))
 
 (defn login
+  "Logs in at the connection with the credentials (:username and :password).
+Returns a result channel containing either the logged-in username, or nil 
+in case of failure."
   [connection credentials]
   (let [{username :username password :password} credentials]
     (enqueue (:channel connection) {:msg "login"
@@ -71,5 +76,6 @@
                       "login_success" (:username msg))))))
 
 (defn close
+  "Closes the DCSS connection."
   [connection]
   (lamina.core/close (:channel connection)))
