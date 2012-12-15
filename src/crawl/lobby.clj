@@ -16,10 +16,8 @@
 
 (defn handle-lobby-info
   [conn]
-  (let [ch (:channel conn)
-        lobby-ch (channel)]
-    {:channel (util/handle-messages ch (util/match-msg #"lobby_.*") lobby-ch)
-     :lobby (->> lobby-ch
-                 (reductions* handle-lobby-msg {})
-                 (filter* (complement :unfinished))
-                 (atom-sink {}))}))
+  (assoc conn
+    :lobby (->> (util/get-msgs conn #"lobby_.*")
+                (reductions* handle-lobby-msg {})
+                (filter* (complement :unfinished))
+                (atom-sink {}))))
