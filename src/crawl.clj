@@ -5,7 +5,8 @@
             [clojure.string :as s]
             [crawl.compression :as compression]
             [crawl.util :as util]
-            crawl.lobby))
+            crawl.lobby
+            crawl.game))
 
 (defn- wrap-decompression
   [ch]
@@ -62,6 +63,28 @@ in case of failure."
                     (case (:msg msg)
                       "login_fail" nil
                       "login_success" (:username msg))))))
+
+(defn start-game
+  "Starts the game with the given id on the connection."
+  [connection game-id]
+  (enqueue (:outgoing connection) {:msg "play"
+                                   :game_id game-id})
+  (crawl.game/game-states connection))
+
+(defn connect-and-start
+  "Connects, logs in and starts a game, returning a channel of game states."
+  [domain port credentials game-id]
+  (run-pipeline
+   (connect domain port)
+   (fn [conn]
+     (run-pipeline
+      (login conn credentials)
+      (fn [result]
+        (when result
+          (let [ch (start-game conn game-id)
+                ch* (splice ch (:outgoing conn))]
+            (on-closed ch* (fn [] (close conn)))
+            ch*)))))))
 
 (defn close
   "Closes the DCSS connection."
