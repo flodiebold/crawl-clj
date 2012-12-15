@@ -18,7 +18,8 @@
             :status []
             :inv (vec (repeat 52 nil)) :equip {}
             :pos {:x 0 :y 0}}
-   :input-mode :normal})
+   :input-mode :normal
+   :messages []})
 
 (defmulti transform-game (fn [game-state msg] (-> (:msg msg)
                                                  (s/replace "_" "-")
@@ -64,6 +65,18 @@
                 :equip update-equip
                 :inv update-inv}
                % msg)))
+
+(defmethod transform-game :msgs
+  [game-state msg]
+  (update-in
+   game-state [:messages]
+   (fn [msgs]
+     (let [rollback (min (+ (get msg :rollback 0)
+                            (get msg :old-msgs 0))
+                         (count msgs))]
+       (-> msgs
+           (subvec 0 (- (count msgs) rollback))
+           (into (:messages msg)))))))
 
 (defmethod transform-game :default
   [game-state msg]
