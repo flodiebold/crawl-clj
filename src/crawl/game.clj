@@ -18,6 +18,7 @@
             :status []
             :inv (vec (repeat 52 nil)) :equip {}
             :pos {:x 0 :y 0}}
+   :map {}
    :input-mode :normal
    :messages []})
 
@@ -78,6 +79,30 @@
            (subvec 0 (- (count msgs) rollback))
            (into (:messages msg)))))))
 
+(defn- update-map-cell
+  [cell data]
+  (let [keymap {:f :feat
+                :g :glyph
+                :col :colour}
+        handlers {:feat (fn [_ f] (e/dungeon-features f))
+                  nil nil}]
+    (u/flexible-merge handlers cell (u/map-keys keymap data))))
+
+(defn- update-map
+  [[m [last-x last-y]] data]
+  (let [x (or (:x data) (inc last-x))
+        y (or (:y data) last-y)]
+    [(update-in m [x y] update-map-cell data)
+     [x y]]))
+
+(defmethod transform-game :map
+  [game-state msg]
+  (let [m (if (:clear msg)
+            {}
+            (:map game-state))
+        [m2 _] (reduce update-map [m nil] (:cells msg))]
+    (assoc game-state :map m2)))
+
 (defmethod transform-game :default
   [game-state msg]
   (println "WARNING: Unhandled message " (:msg msg))
@@ -85,7 +110,8 @@
 
 (def discard-messages
   #"(?x) ping|game_client|lobby_.*|
-         html|set_game_links")
+         html|set_game_links|game_started|
+         update_spectators")
 
 (defn- handle-msg
   [game-state msg]

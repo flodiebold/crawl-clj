@@ -23,6 +23,10 @@
                 m)))]
     (reduce merge-entry m1 m2)))
 
+(defn map-keys
+  [f m]
+  (reduce (fn [m2 kv] (assoc m2 (f (key kv)) (val kv))) {} m))
+
 (defn parse-int
   [s]
   (Long/parseLong s))
