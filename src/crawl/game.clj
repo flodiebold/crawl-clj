@@ -110,8 +110,8 @@
 
 (def discard-messages
   #"(?x) ping|game_client|lobby_.*|
-         html|set_game_links|game_started|
-         update_spectators")
+         html|set_game_links|game_started|watching_started|
+         update_spectators|chat")
 
 (defn- handle-msg
   [game-state msg]

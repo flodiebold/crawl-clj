@@ -65,26 +65,43 @@ in case of failure."
                       "login_success" (:username msg))))))
 
 (defn start-game
-  "Starts the game with the given id on the connection."
+  "Starts the game with the given id."
   [connection game-id]
   (enqueue (:outgoing connection) {:msg "play"
                                    :game_id game-id})
   (crawl.game/game-states connection))
 
-(defn connect-and-start
-  "Connects, logs in and starts a game, returning a channel of game states."
-  [domain port credentials game-id]
+(defn watch-player
+  [connection username]
+  "Watches the player with the given username."
+  (enqueue (:outgoing connection) {:msg "watch"
+                                   :username username})
+  (crawl.game/game-states connection))
+
+(defn- connect-and
+  [domain port credentials then & args]
   (run-pipeline
    (connect domain port)
    (fn [conn]
      (run-pipeline
-      (login conn credentials)
+      (if credentials
+        (login conn credentials)
+        (success-result true))
       (fn [result]
         (when result
-          (let [ch (start-game conn game-id)
+          (let [ch (apply then conn args)
                 ch* (splice ch (:outgoing conn))]
             (on-closed ch* (fn [] (close conn)))
             ch*)))))))
+
+(defn connect-and-start
+  "Connects, logs in and starts a game, returning a channel of game states."
+  [domain port credentials game-id]
+  (connect-and domain port credentials start-game game-id))
+
+(defn connect-and-watch
+  [domain port username]
+  (connect-and domain port nil watch-player username))
 
 (defn close
   "Closes the DCSS connection."
