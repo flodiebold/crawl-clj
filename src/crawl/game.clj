@@ -42,7 +42,8 @@
 (defn- update-equip
   [eq data]
   (reduce (fn [eq [k v]]
-            (assoc eq (e/equip (u/parse-int (name k))) v))
+            (assoc eq (e/equip (u/parse-int (name k)))
+                   (if (neg? v) nil v)))
           eq data))
 
 (defn- update-item
@@ -79,14 +80,23 @@
            (subvec 0 (- (count msgs) rollback))
            (into (:messages msg)))))))
 
+(defn- extract-tile-flags
+  [t]
+  (when (contains? t :bg)
+    (let [bg (:bg t)]
+      (into {} (for [[k v] e/tile-flags]
+                 [k (not= 0 (bit-and bg v))])))))
+
 (defn- update-map-cell
   [cell data]
   (let [keymap {:f :feat
                 :g :glyph
                 :col :colour}
         handlers {:feat (fn [_ f] (e/dungeon-features f))
-                  nil nil}]
-    (u/flexible-merge handlers cell (u/map-keys keymap data))))
+                  nil nil}
+        flags (extract-tile-flags (:t data))]
+    (u/flexible-merge handlers cell (merge (u/map-keys keymap data)
+                                           flags))))
 
 (defn- update-map
   [[m [last-x last-y]] data]

@@ -164,3 +164,6 @@
    :explore-horizon
    :unknown-altar
    :unknown-portal])
+
+(def tile-flags
+  {:unseen 0x40000})
