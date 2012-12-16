@@ -167,3 +167,6 @@
 
 (def tile-flags
   {:unseen 0x40000})
+
+(def attitude
+  [:hostile :neutral :strict-neutral :good-neutral :friendly])

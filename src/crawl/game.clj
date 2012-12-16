@@ -19,8 +19,16 @@
             :inv (vec (repeat 52 nil)) :equip {}
             :pos {:x 0 :y 0}}
    :map {}
+   :monsters {}
    :input-mode :normal
    :messages []})
+
+(def blank-monster
+  {:name ""
+   :type 0
+   :att :hostile
+   :btype 0
+   :threat 0})
 
 (defmulti transform-game (fn [game-state msg] (-> (:msg msg)
                                                  (s/replace "_" "-")
@@ -55,8 +63,9 @@
 (defn- update-inv
   [inv data]
   (reduce (fn [inv [k v]]
-            (update-in inv [(u/parse-int (name k))]
-                       update-item v))
+            (let [slot (u/parse-int (name k))]
+              (update-in inv [slot]
+                         update-item (assoc v :slot slot))))
           inv data))
 
 (defmethod transform-game :player
@@ -80,6 +89,22 @@
            (subvec 0 (- (count msgs) rollback))
            (into (:messages msg)))))))
 
+(defn- update-monster
+  [mon data monsters]
+  (let [base-mon (if (contains? data :id)
+                   (get monsters (:id data))
+                   (or mon blank-monster))
+        keymap {:id :id
+                :name :name
+                :type :type
+                :att :attitude
+                :btype :base-type
+                :threat :threat}
+        handlers {:attitude (fn [_ a] (e/attitude a))
+                  nil nil}]
+    (u/flexible-merge handlers base-mon
+                      (u/map-keys keymap data))))
+
 (defn- extract-tile-flags
   [t]
   (when (contains? t :bg)
@@ -88,30 +113,41 @@
                  [k (not= 0 (bit-and bg v))])))))
 
 (defn- update-map-cell
-  [cell data]
+  [cell data monsters]
   (let [keymap {:f :feat
                 :g :glyph
-                :col :colour}
+                :col :colour
+                :mon :monster}
         handlers {:feat (fn [_ f] (e/dungeon-features f))
+                  :monster (fn [old new]
+                             (update-monster old new monsters))
                   nil nil}
-        flags (extract-tile-flags (:t data))]
-    (u/flexible-merge handlers cell (merge (u/map-keys keymap data)
-                                           flags))))
+        flags (extract-tile-flags (:t data))
+        cell2 (u/flexible-merge
+               handlers cell
+               (merge (u/map-keys keymap data) flags))]
+    [cell2
+     (if (get-in cell2 [:monster :id])
+       (let [m (:monster cell2)]
+         (assoc monsters (:id m) m))
+       monsters)]))
 
 (defn- update-map
-  [[m [last-x last-y]] data]
+  [[m [last-x last-y] monsters] data]
   (let [x (or (:x data) (inc last-x))
-        y (or (:y data) last-y)]
-    [(update-in m [x y] update-map-cell data)
-     [x y]]))
+        y (or (:y data) last-y)
+        [new-cell new-monsters] (update-map-cell (get-in m [x y])
+                                                 data monsters)]
+    [(assoc-in m [x y] new-cell) [x y] new-monsters]))
 
 (defmethod transform-game :map
   [game-state msg]
   (let [m (if (:clear msg)
             {}
             (:map game-state))
-        [m2 _] (reduce update-map [m nil] (:cells msg))]
-    (assoc game-state :map m2)))
+        mo (:monsters game-state)
+        [m2 _ mo2] (reduce update-map [m nil mo] (:cells msg))]
+    (assoc game-state :map m2 :monsters mo2)))
 
 (defmethod transform-game :default
   [game-state msg]
@@ -120,7 +156,9 @@
 
 (def discard-messages
   #"(?x) ping|game_client|lobby_.*|
-         html|set_game_links|game_started|watching_started|
+         html|set_game_links|game_started|watching_started|flash|
+         cursor|txt|
+         init_menus|menu|close_menu|
          update_spectators|chat")
 
 (defn- handle-msg
