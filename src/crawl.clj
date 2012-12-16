@@ -64,6 +64,11 @@ in case of failure."
                       "login_fail" nil
                       "login_success" (:username msg))))))
 
+(defn close
+  "Closes the DCSS connection."
+  [connection]
+  (lamina.core/close (:outgoing connection)))
+
 (defn start-game
   "Starts the game with the given id."
   [connection game-id]
@@ -102,8 +107,3 @@ in case of failure."
 (defn connect-and-watch
   [domain port username]
   (connect-and domain port nil watch-player username))
-
-(defn close
-  "Closes the DCSS connection."
-  [connection]
-  (lamina.core/close (:outgoing connection)))

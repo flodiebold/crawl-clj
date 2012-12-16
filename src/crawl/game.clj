@@ -156,7 +156,8 @@
 
 (def discard-messages
   #"(?x) ping|game_client|lobby_.*|
-         html|set_game_links|game_started|watching_started|flash|
+         html|set_game_links|game_started|watching_started|
+         flash|overlay|clear_overlays|delay|
          cursor|txt|
          init_menus|menu|close_menu|
          update_spectators|chat")
