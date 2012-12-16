@@ -91,19 +91,20 @@
 
 (defn- update-monster
   [mon data monsters]
-  (let [base-mon (if (contains? data :id)
-                   (get monsters (:id data))
-                   (or mon blank-monster))
-        keymap {:id :id
-                :name :name
-                :type :type
-                :att :attitude
-                :btype :base-type
-                :threat :threat}
-        handlers {:attitude (fn [_ a] (e/attitude a))
-                  nil nil}]
-    (u/flexible-merge handlers base-mon
-                      (u/map-keys keymap data))))
+  (when-not (nil? data)
+    (let [base-mon (if (contains? data :id)
+                     (get monsters (:id data))
+                     (or mon blank-monster))
+          keymap {:id :id
+                  :name :name
+                  :type :type
+                  :att :attitude
+                  :btype :base-type
+                  :threat :threat}
+          handlers {:attitude (fn [_ a] (e/attitude a))
+                    nil nil}]
+      (u/flexible-merge handlers base-mon
+                        (u/map-keys keymap data)))))
 
 (defn- extract-tile-flags
   [t]

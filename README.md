@@ -12,10 +12,5 @@ A library for connecting to DCSS Webtiles servers.
     {:x 38, :y 7}
     user> (for [[x col] (:map @g) [y cell] col :when (and (:monster cell) (not (:unseen cell)))] (:monster cell))
     ({:id 72, :name "slime creature", :type 82, :attitude :hostile, :base-type 82, :threat 2}
-     {:id 72, :name "slime creature", :type 82, :attitude :hostile, :base-type 82, :threat 2}
      {:id 73, :name "brown ugly thing", :type 138, :attitude :hostile, :base-type 138, :threat 2}
-     {:id 72, :name "slime creature", :type 82, :attitude :hostile, :base-type 82, :threat 2}
-     {:id 70}
-     {:id 72, :name "slime creature", :type 82, :attitude :hostile, :base-type 82, :threat 2}
-     {:id 72, :name "slime creature", :type 82, :attitude :hostile, :base-type 82, :threat 2}
      {:id 71, :name "very large slime creature", :type 82, :attitude :hostile, :base-type 82, :threat 2})
